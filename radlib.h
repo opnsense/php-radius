@@ -133,6 +133,7 @@
 #define RAD_PORT_LIMIT			62	/* Integer */
 #define RAD_LOGIN_LAT_PORT		63	/* Integer */
 #define RAD_CONNECT_INFO		77	/* String */
+#define RAD_MSG_AUTH			80  	/* String */
 
 #define RAD_NAS_IPV6_ADDRESS		95      /* IPv6 address */
 #define RAD_FRAMED_INTERFACE_ID		96      /* 8 octets */
@@ -223,7 +224,7 @@ void			 rad_close(struct rad_handle *);
 int			 rad_config(struct rad_handle *, const char *);
 int			 rad_continue_send_request(struct rad_handle *, 
 				int, int *, struct timeval *);
-int			 rad_create_request(struct rad_handle *, int);
+int			 rad_create_request(struct rad_handle *, int, bool);
 struct in_addr		 rad_cvt_addr(const void *);
 u_int32_t		 rad_cvt_int(const void *);
 char			*rad_cvt_string(const void *, size_t);

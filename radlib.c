@@ -49,6 +49,14 @@
 #include <unistd.h>
 #endif
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#ifdef HAVE_OPENSSL
+#include <openssl/hmac.h>
+#endif
+
 #include "radlib_compat.h"
 #include "radlib_md5.h"
 #include "radlib_private.h"
@@ -77,6 +85,29 @@ clear_password(struct rad_handle *h)
 	}
 	h->pass_pos = 0;
 }
+
+#ifdef HAVE_OPENSSL
+static void
+compute_hmac_md5(const char *key, unsigned char *data, int datalen, unsigned char *output)
+{
+	unsigned int len = 16;
+
+	HMAC(EVP_md5(), key, strlen(key), (unsigned char *)data, datalen, output, &len);
+}
+
+static void
+insert_message_authenticator(struct rad_handle *h, int srv)
+{
+	const struct rad_server *srvp;
+
+	srvp = &h->servers[srv];
+	h->request[POS_MSG_AUTH] = RAD_MSG_AUTH;
+	h->request[POS_MSG_AUTH + 1] = LEN_MSG_AUTH;
+	memset(&h->request[POS_MSG_AUTH + 2], 0, LEN_MSG_AUTH_HASH);
+
+	compute_hmac_md5(srvp->secret, h->request, h->req_len, &h->request[POS_MSG_AUTH + 2]);
+}
+#endif
 
 static void
 generr(struct rad_handle *h, const char *format, ...)
@@ -149,8 +180,12 @@ is_valid_response(struct rad_handle *h, int srv,
 {
 	MD5_CTX ctx;
 	unsigned char md5[16];
+	unsigned char buf[MSGSIZE];
 	const struct rad_server *srvp;
-	int len;
+	int len, resp_type, resp_attr_len;
+	int resp_pos = 0;
+	bool found = false;
+
 
 	srvp = &h->servers[srv];
 
@@ -166,6 +201,8 @@ is_valid_response(struct rad_handle *h, int srv,
 	len = h->response[POS_LENGTH] << 8 | h->response[POS_LENGTH+1];
 	if (len > h->resp_len)
 		return 0;
+	if (len > MSGSIZE)
+		return 0;
 
 	/* Check the response authenticator */
 	MD5Init(&ctx);
@@ -176,6 +213,39 @@ is_valid_response(struct rad_handle *h, int srv,
 	MD5Final(md5, &ctx);
 	if (memcmp(&h->response[POS_AUTH], md5, sizeof md5) != 0)
 		return 0;
+
+#ifdef HAVE_OPENSSL
+	if (h->msg_auth &&
+	    (h->response[POS_CODE] == RAD_ACCESS_ACCEPT ||
+	     h->response[POS_CODE] == RAD_ACCESS_REJECT ||
+	     h->response[POS_CODE] == RAD_ACCESS_CHALLENGE)) {
+		resp_pos = POS_ATTRS;
+		while (true) {
+			if (resp_pos >= h->resp_len)
+				break;
+
+			resp_type = h->response[resp_pos++];
+			resp_attr_len = h->response[resp_pos++] - 2;
+
+			if (resp_type == RAD_MSG_AUTH && resp_attr_len == LEN_MSG_AUTH_HASH) {
+				found = true;
+				break;
+			}
+
+			resp_pos += resp_attr_len;
+		}
+
+		if (found) {
+			memcpy(&buf[POS_CODE], &h->response[POS_CODE], POS_AUTH - POS_CODE);
+			memcpy(&buf[POS_AUTH], &h->request[POS_AUTH], LEN_AUTH);
+			memcpy(&buf[POS_ATTRS], &h->response[POS_ATTRS], len - POS_ATTRS);
+			memset(&buf[resp_pos], 0, LEN_MSG_AUTH_HASH);
+			compute_hmac_md5(srvp->secret, buf, len, md5);
+			if (memcmp(&h->response[resp_pos], md5, LEN_MSG_AUTH_HASH) != 0)
+				return 0;
+		}
+	}
+#endif
 
 	return 1;
 }
@@ -541,10 +611,15 @@ rad_continue_send_request(struct rad_handle *h, int selected, int *fd,
 	    || h->request[POS_CODE] == RAD_DISCONNECT_NAK)
 		/* Insert the request authenticator into the request */
 		insert_request_authenticator(h, h->srv);
-	else
+	else {
 		/* Insert the scrambled password into the request */
 		if (h->pass_pos != 0)
 			insert_scrambled_password(h, h->srv);
+#ifdef HAVE_OPENSSL
+		if (h->msg_auth)
+			insert_message_authenticator(h, h->srv);
+#endif
+	}
 
 	/* Send the request */
 	n = sendto(h->fd, h->request, h->req_len, 0,
@@ -572,7 +647,7 @@ rad_continue_send_request(struct rad_handle *h, int selected, int *fd,
 }
 
 int
-rad_create_request(struct rad_handle *h, int code)
+rad_create_request(struct rad_handle *h, int code, bool msg_auth)
 {
 	int i;
 
@@ -588,6 +663,14 @@ rad_create_request(struct rad_handle *h, int code)
 	h->req_len = POS_ATTRS;
 	h->request_created = 1;    
 	clear_password(h);
+
+#ifdef HAVE_OPENSSL
+	if (msg_auth) {
+		h->msg_auth = true;
+		h->req_len += LEN_MSG_AUTH;
+	}
+#endif
+
 	return 0;
 }
 
