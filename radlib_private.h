@@ -64,6 +64,9 @@
 #define POS_AUTH	4		/* Authenticator */
 #define LEN_AUTH	16		/* Length of authenticator */
 #define POS_ATTRS	20		/* Start of attributes */
+#define POS_MSG_AUTH	20		/* Start of message authentication, if applicable */
+#define LEN_MSG_AUTH	18		/* Length of message authentication attribute */
+#define LEN_MSG_AUTH_HASH	16		/* Length of message authentication hash */
 
 struct rad_server {
 	struct sockaddr_in addr;	/* Address of server */
@@ -86,6 +89,7 @@ struct rad_handle {
 	int		 pass_len;	/* Length of cleartext password */
 	int		 pass_pos;	/* Position of scrambled password */
 	char	 	 chap_pass;	/* Have we got a CHAP_PASSWORD ? */
+	bool    	 msg_auth;	/* Are we doing message authentication? */
 	unsigned char	 response[MSGSIZE];	/* Response received */
 	int		 resp_len;	/* Length of response */
 	int		 resp_pos;	/* Current position scanning attrs */

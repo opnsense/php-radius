@@ -93,6 +93,7 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(arginfo_radius_create_request, 0, 0, 2)
 	ZEND_ARG_INFO(0, "radius_handle")
 	ZEND_ARG_INFO(0, "type")
+	ZEND_ARG_INFO(0, "msg_auth")
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_radius_put_string, 0, 0, 3)
@@ -364,20 +365,21 @@ PHP_FUNCTION(radius_add_server)
 }
 /* }}} */
 
-/* {{{ proto bool radius_create_request(desc, code) */
+/* {{{ proto bool radius_create_request(desc, code, msg_auth) */
 PHP_FUNCTION(radius_create_request)
 {
 	long code;
 	struct rad_handle *radh;
+	zend_bool msg_auth = 0;
 	zval *z_radh;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "rl", &z_radh, &code) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "rl|b", &z_radh, &code, &msg_auth) == FAILURE) {
 		return;
 	}
 
 	RADIUS_FETCH_RESOURCE(radh, z_radh);
 
-	if (rad_create_request(radh, code) == -1) {
+	if (rad_create_request(radh, code, msg_auth) == -1) {
 		RETURN_FALSE;
 	} else {
 		RETURN_TRUE;
