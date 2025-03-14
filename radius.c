@@ -51,12 +51,12 @@ any other GPL-like (LGPL, GPL2) License.
 
 #include "pecl-compat/compat.h"
 
-void _radius_close(zend_resource *res TSRMLS_DC);
+void _radius_close(zend_resource *res);
 
 static int _init_options(struct rad_attr_options *out, int options, int tag);
 
 #define RADIUS_FETCH_RESOURCE(radh, zv) \
-	radh = (struct rad_handle *)compat_zend_fetch_resource(zv, "rad_handle", le_radius TSRMLS_CC); \
+	radh = (struct rad_handle *)compat_zend_fetch_resource(zv, "rad_handle", le_radius); \
 	if (!radh) { \
 		RETURN_FALSE; \
 	}
@@ -64,6 +64,102 @@ static int _init_options(struct rad_attr_options *out, int options, int tag);
 /* If you declare any globals in php_radius.h uncomment this:
 ZEND_DECLARE_MODULE_GLOBALS(radius)
 */
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_radius_auth_open, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+#define arginfo_radius_acct_open arginfo_radius_auth_open
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_radius_close, 0, 0, 1)
+	ZEND_ARG_INFO(0, "radius_handle")
+ZEND_END_ARG_INFO()
+
+#define arginfo_radius_strerror arginfo_radius_close
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_radius_config, 0, 0, 2)
+	ZEND_ARG_INFO(0, "radius_handle")
+	ZEND_ARG_INFO(0, "file")
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_radius_add_server, 0, 0, 6)
+	ZEND_ARG_INFO(0, "radius_handle")
+	ZEND_ARG_INFO(0, "hostname")
+	ZEND_ARG_INFO(0, "port")
+	ZEND_ARG_INFO(0, "secret")
+	ZEND_ARG_INFO(0, "timeout")
+	ZEND_ARG_INFO(0, "max_tries")
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_radius_create_request, 0, 0, 2)
+	ZEND_ARG_INFO(0, "radius_handle")
+	ZEND_ARG_INFO(0, "type")
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_radius_put_string, 0, 0, 3)
+	ZEND_ARG_INFO(0, "radius_handle")
+	ZEND_ARG_INFO(0, "type")
+	ZEND_ARG_INFO(0, "value")
+	ZEND_ARG_INFO(0, "options")
+	ZEND_ARG_INFO(0, "tag")
+ZEND_END_ARG_INFO()
+
+#define arginfo_radius_put_int	arginfo_radius_put_string
+#define arginfo_radius_put_attr	arginfo_radius_put_string
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_radius_put_addr, 0, 0, 3)
+	ZEND_ARG_INFO(0, "radius_handle")
+	ZEND_ARG_INFO(0, "type")
+	ZEND_ARG_INFO(0, "addr")
+	ZEND_ARG_INFO(0, "options")
+	ZEND_ARG_INFO(0, "tag")
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_radius_put_vendor_string, 0, 0, 4)
+	ZEND_ARG_INFO(0, "radius_handle")
+	ZEND_ARG_INFO(0, "vendor")
+	ZEND_ARG_INFO(0, "type")
+	ZEND_ARG_INFO(0, "value")
+	ZEND_ARG_INFO(0, "options")
+	ZEND_ARG_INFO(0, "tag")
+ZEND_END_ARG_INFO()
+
+#define arginfo_radius_put_vendor_int	arginfo_radius_put_vendor_string
+#define arginfo_radius_put_vendor_attr	arginfo_radius_put_vendor_string
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_radius_put_vendor_addr, 0, 0, 4)
+	ZEND_ARG_INFO(0, "radius_handle")
+	ZEND_ARG_INFO(0, "vendor")
+	ZEND_ARG_INFO(0, "type")
+	ZEND_ARG_INFO(0, "addr")
+ZEND_END_ARG_INFO()
+
+#define arginfo_radius_send_request	arginfo_radius_close
+#define arginfo_radius_get_attr		arginfo_radius_close
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_radius_get_tagged_attr_data, 0, 0, 1)
+	ZEND_ARG_INFO(0, "data")
+ZEND_END_ARG_INFO()
+
+#define arginfo_radius_get_tagged_attr_tag	arginfo_radius_get_tagged_attr_data
+#define arginfo_radius_get_vendor_attr		arginfo_radius_get_tagged_attr_data
+#define arginfo_radius_cvt_addr			arginfo_radius_get_tagged_attr_data
+#define arginfo_radius_cvt_int			arginfo_radius_get_tagged_attr_data
+#define arginfo_radius_cvt_string		arginfo_radius_get_tagged_attr_data
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_radius_salt_encrypt_attr, 0, 0, 2)
+	ZEND_ARG_INFO(0, "radius_handle")
+	ZEND_ARG_INFO(0, "data")
+ZEND_END_ARG_INFO()
+
+#define arginfo_radius_request_authenticator	arginfo_radius_close
+#define arginfo_radius_server_secret		arginfo_radius_close
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_radius_demangle, 0, 0, 2)
+	ZEND_ARG_INFO(0, "radius_handle")
+	ZEND_ARG_INFO(0, "mangled")
+ZEND_END_ARG_INFO()
+
+#define arginfo_radius_demangle_mppe_key arginfo_radius_demangle
 
 /* True global resources - no need for thread safety here */
 static int le_radius;
@@ -73,34 +169,34 @@ static int le_radius;
  * Every user visible function must have an entry in radius_functions[].
  */
 zend_function_entry radius_functions[] = {
-	PHP_FE(radius_auth_open,    NULL)
-	PHP_FE(radius_acct_open,    NULL)
-	PHP_FE(radius_close,        NULL)
-	PHP_FE(radius_strerror,     NULL)
-	PHP_FE(radius_config,       NULL)
-	PHP_FE(radius_add_server,	NULL)
-	PHP_FE(radius_create_request,	NULL)
-	PHP_FE(radius_put_string,	NULL)
-	PHP_FE(radius_put_int,	NULL)
-	PHP_FE(radius_put_attr,	NULL)
-	PHP_FE(radius_put_addr,	NULL)
-	PHP_FE(radius_put_vendor_string,	NULL)
-	PHP_FE(radius_put_vendor_int,	NULL)
-	PHP_FE(radius_put_vendor_attr,	NULL)
-	PHP_FE(radius_put_vendor_addr,	NULL)
-	PHP_FE(radius_send_request,	NULL)
-	PHP_FE(radius_get_attr,	NULL)
-	PHP_FE(radius_get_tagged_attr_data, NULL)
-	PHP_FE(radius_get_tagged_attr_tag, NULL)
-	PHP_FE(radius_get_vendor_attr,	NULL)
-	PHP_FE(radius_cvt_addr,	NULL)
-	PHP_FE(radius_cvt_int,	NULL)
-	PHP_FE(radius_cvt_string,	NULL)
-	PHP_FE(radius_salt_encrypt_attr,	NULL)
-	PHP_FE(radius_request_authenticator,	NULL)
-	PHP_FE(radius_server_secret,	NULL)
-	PHP_FE(radius_demangle,	NULL)    
-	PHP_FE(radius_demangle_mppe_key,	NULL)    
+	PHP_FE(radius_auth_open,		arginfo_radius_auth_open)
+	PHP_FE(radius_acct_open,		arginfo_radius_acct_open)
+	PHP_FE(radius_close,			arginfo_radius_close)
+	PHP_FE(radius_strerror,			arginfo_radius_strerror)
+	PHP_FE(radius_config,			arginfo_radius_config)
+	PHP_FE(radius_add_server,		arginfo_radius_add_server)
+	PHP_FE(radius_create_request,		arginfo_radius_create_request)
+	PHP_FE(radius_put_string,		arginfo_radius_put_string)
+	PHP_FE(radius_put_int,			arginfo_radius_put_int)
+	PHP_FE(radius_put_attr,			arginfo_radius_put_attr)
+	PHP_FE(radius_put_addr,			arginfo_radius_put_addr)
+	PHP_FE(radius_put_vendor_string,	arginfo_radius_put_vendor_string)
+	PHP_FE(radius_put_vendor_int,		arginfo_radius_put_vendor_int)
+	PHP_FE(radius_put_vendor_attr,		arginfo_radius_put_vendor_attr)
+	PHP_FE(radius_put_vendor_addr,		arginfo_radius_put_vendor_addr)
+	PHP_FE(radius_send_request,		arginfo_radius_send_request)
+	PHP_FE(radius_get_attr,			arginfo_radius_get_attr)
+	PHP_FE(radius_get_tagged_attr_data,	arginfo_radius_get_tagged_attr_data)
+	PHP_FE(radius_get_tagged_attr_tag,	arginfo_radius_get_tagged_attr_tag)
+	PHP_FE(radius_get_vendor_attr,		arginfo_radius_get_vendor_attr)
+	PHP_FE(radius_cvt_addr,			arginfo_radius_cvt_addr)
+	PHP_FE(radius_cvt_int,			arginfo_radius_cvt_int)
+	PHP_FE(radius_cvt_string,		arginfo_radius_cvt_string)
+	PHP_FE(radius_salt_encrypt_attr,	arginfo_radius_salt_encrypt_attr)
+	PHP_FE(radius_request_authenticator,	arginfo_radius_request_authenticator)
+	PHP_FE(radius_server_secret,		arginfo_radius_server_secret)
+	PHP_FE(radius_demangle,			arginfo_radius_demangle)
+	PHP_FE(radius_demangle_mppe_key,	arginfo_radius_demangle_mppe_key)
 	{NULL, NULL, NULL}	/* Must be the last line in radius_functions[] */
 };
 /* }}} */
@@ -165,7 +261,7 @@ PHP_FUNCTION(radius_auth_open)
 	struct rad_handle *radh = rad_auth_open();
 
 	if (radh != NULL) {
-		compat_zend_register_resource(return_value, radh, le_radius TSRMLS_CC);
+		compat_zend_register_resource(return_value, radh, le_radius);
 	} else {
 		RETURN_FALSE;
 	}
@@ -178,7 +274,7 @@ PHP_FUNCTION(radius_acct_open)
 	struct rad_handle *radh = rad_acct_open();
 
 	if (radh != NULL) {
-		compat_zend_register_resource(return_value, radh, le_radius TSRMLS_CC);
+		compat_zend_register_resource(return_value, radh, le_radius);
 	} else {
 		RETURN_FALSE;
 	}
@@ -191,13 +287,13 @@ PHP_FUNCTION(radius_close)
 	struct rad_handle *radh;
 	zval *z_radh;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r", &z_radh) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "r", &z_radh) == FAILURE) {
 		return;
 	}
 
 	/* Fetch the resource to verify it. */
 	RADIUS_FETCH_RESOURCE(radh, z_radh);
-	compat_zend_delete_resource(z_radh TSRMLS_CC);
+	compat_zend_delete_resource(z_radh);
 	RETURN_TRUE;
 }
 /* }}} */
@@ -209,7 +305,7 @@ PHP_FUNCTION(radius_strerror)
 	struct rad_handle *radh;
 	zval *z_radh;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r", &z_radh) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "r", &z_radh) == FAILURE) {
 		return;
 	}
 
@@ -227,7 +323,7 @@ PHP_FUNCTION(radius_config)
 	struct rad_handle *radh;
 	zval *z_radh;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rs", &z_radh, &filename, &filename_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "rs", &z_radh, &filename, &filename_len) == FAILURE) {
 		return;
 	}
 
@@ -250,7 +346,7 @@ PHP_FUNCTION(radius_add_server)
 	struct rad_handle *radh;
 	zval *z_radh;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rslsll", &z_radh,
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "rslsll", &z_radh,
 		&hostname, &hostname_len,
 		&port,
 		&secret, &secret_len,
@@ -275,7 +371,7 @@ PHP_FUNCTION(radius_create_request)
 	struct rad_handle *radh;
 	zval *z_radh;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rl", &z_radh, &code) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "rl", &z_radh, &code) == FAILURE) {
 		return;
 	}
 
@@ -299,7 +395,7 @@ PHP_FUNCTION(radius_put_string)
 	struct rad_handle *radh;
 	zval *z_radh;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rls|ll", &z_radh, &type, &str, &str_len, &options, &tag)
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "rls|ll", &z_radh, &type, &str, &str_len, &options, &tag)
 		== FAILURE) {
 		return;
 	}
@@ -324,7 +420,7 @@ PHP_FUNCTION(radius_put_int)
 	struct rad_handle *radh;
 	zval *z_radh;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rll|ll", &z_radh, &type, &val, &options, &tag)
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "rll|ll", &z_radh, &type, &val, &options, &tag)
 		== FAILURE) {
 		return;
 	}
@@ -351,7 +447,7 @@ PHP_FUNCTION(radius_put_attr)
 	struct rad_handle *radh;
 	zval *z_radh;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rls|ll", &z_radh, &type, &data, &len, &options, &tag)
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "rls|ll", &z_radh, &type, &data, &len, &options, &tag)
 		== FAILURE) {
 		return;
 	}
@@ -380,7 +476,7 @@ PHP_FUNCTION(radius_put_addr)
 	zval *z_radh;
 	struct in_addr intern_addr;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rls|ll", &z_radh, &type, &addr, &addrlen, &options, &tag)
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "rls|ll", &z_radh, &type, &addr, &addrlen, &options, &tag)
 		== FAILURE) {
 		return;
 	}
@@ -412,7 +508,7 @@ PHP_FUNCTION(radius_put_vendor_string)
 	struct rad_handle *radh;
 	zval *z_radh;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rlls|ll", &z_radh, &vendor, &type, &str, &str_len, &options, &tag)
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "rlls|ll", &z_radh, &vendor, &type, &str, &str_len, &options, &tag)
 		== FAILURE) {
 		return;
 	}
@@ -437,7 +533,7 @@ PHP_FUNCTION(radius_put_vendor_int)
 	struct rad_handle *radh;
 	zval *z_radh;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rlll|ll", &z_radh, &vendor, &type, &val, &options, &tag)
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "rlll|ll", &z_radh, &vendor, &type, &val, &options, &tag)
 		== FAILURE) {
 		return;
 	}
@@ -464,7 +560,7 @@ PHP_FUNCTION(radius_put_vendor_attr)
 	struct rad_handle *radh;
 	zval *z_radh;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rlls|ll", &z_radh, &vendor, &type,
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "rlls|ll", &z_radh, &vendor, &type,
 		&data, &len, &options, &tag) == FAILURE) {
 		return;
 	}
@@ -492,7 +588,7 @@ PHP_FUNCTION(radius_put_vendor_addr)
 	zval *z_radh;
 	struct in_addr intern_addr;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rlls|ll", &z_radh, &vendor,
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "rlls|ll", &z_radh, &vendor,
 		&type, &addr, &addrlen, &options, &tag) == FAILURE) {
 		return;
 	}
@@ -521,7 +617,7 @@ PHP_FUNCTION(radius_send_request)
 	zval *z_radh;
 	int res;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r", &z_radh)
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "r", &z_radh)
 		== FAILURE) {
 		return;
 	}
@@ -546,7 +642,7 @@ PHP_FUNCTION(radius_get_attr)
 	size_t len;
 	zval *z_radh;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r", &z_radh) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "r", &z_radh) == FAILURE) {
 		return;
 	}
 
@@ -574,7 +670,7 @@ PHP_FUNCTION(radius_get_tagged_attr_data)
 	const char *attr;
 	COMPAT_ARG_SIZE_T len;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &attr, &len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "s", &attr, &len) == FAILURE) {
 		return;
 	}
 
@@ -595,7 +691,7 @@ PHP_FUNCTION(radius_get_tagged_attr_tag)
 	const char *attr;
 	COMPAT_ARG_SIZE_T len;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &attr, &len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "s", &attr, &len) == FAILURE) {
 		return;
 	}
 
@@ -617,7 +713,7 @@ PHP_FUNCTION(radius_get_vendor_attr)
 	unsigned char type;
 	size_t data_len;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &raw, &len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "s", &raw, &len) == FAILURE) {
 		return;
 	}
 
@@ -642,7 +738,7 @@ PHP_FUNCTION(radius_cvt_addr)
 	COMPAT_ARG_SIZE_T len;
 	struct in_addr addr;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &data, &len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "s", &data, &len) == FAILURE) {
 		return;
 	}
 
@@ -659,7 +755,7 @@ PHP_FUNCTION(radius_cvt_int)
 	COMPAT_ARG_SIZE_T len;
 	int val;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &data, &len)
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "s", &data, &len)
 		== FAILURE) {
 		return;
 	}
@@ -676,7 +772,7 @@ PHP_FUNCTION(radius_cvt_string)
 	char *val;
 	COMPAT_ARG_SIZE_T len;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &data, &len)
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "s", &data, &len)
 		== FAILURE) {
 		return;
 	}
@@ -698,7 +794,7 @@ PHP_FUNCTION(radius_salt_encrypt_attr)
 	struct rad_salted_value salted;
 	zval *z_radh;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rs", &z_radh, &data, &len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "rs", &z_radh, &data, &len) == FAILURE) {
 		return;
 	}
 
@@ -724,7 +820,7 @@ PHP_FUNCTION(radius_request_authenticator)
 	char buf[LEN_AUTH];
 	zval *z_radh;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r", &z_radh) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "r", &z_radh) == FAILURE) {
 		return;
 	}
 
@@ -746,7 +842,7 @@ PHP_FUNCTION(radius_server_secret)
 	struct rad_handle *radh;
 	zval *z_radh;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r", &z_radh) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "r", &z_radh) == FAILURE) {
 		return;
 	}
 
@@ -771,7 +867,7 @@ PHP_FUNCTION(radius_demangle)
 	COMPAT_ARG_SIZE_T len;
 	int res;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rs", &z_radh, &mangled, &len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "rs", &z_radh, &mangled, &len) == FAILURE) {
 		return;
 	}
 
@@ -802,7 +898,7 @@ PHP_FUNCTION(radius_demangle_mppe_key)
 	COMPAT_ARG_SIZE_T len;
 	int res;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rs", &z_radh, &mangled, &len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "rs", &z_radh, &mangled, &len) == FAILURE) {
 		return;
 	}
 
@@ -844,7 +940,7 @@ int _init_options(struct rad_attr_options *out, int options, int tag) {
 /* }}} */
 
 /* {{{ _radius_close() */
-void _radius_close(zend_resource *res TSRMLS_DC)
+void _radius_close(zend_resource *res)
 {
 	struct rad_handle *radh = (struct rad_handle *)res->ptr;
 	rad_close(radh);
