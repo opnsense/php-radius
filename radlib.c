@@ -1,5 +1,6 @@
 /*-
  * Copyright 1998 Juniper Networks, Inc.
+ * Copyright 2025 Deciso B.V.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
